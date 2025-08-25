@@ -1,8 +1,10 @@
 # Informação do Grupo
 Guilherme knapik - kingnapik
+
 Nome do grupo no Canvas: Grupo 3 - RA1
 
 Disciplina: Linguagem Formal de Compiladores
+
 Prof.: Frank Coelho de Alcantara
 
 
