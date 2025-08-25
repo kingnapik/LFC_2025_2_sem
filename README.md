@@ -1,9 +1,7 @@
-## Group Information
-```cpp
+## Informação do Grupo
 Guilherme knapik - kingnapik
-
 Nome do grupo no Canvas: Grupo 3 - RA1
-```
+
 
 # Calculator with Finite State Automata and Assembly Generation
 
