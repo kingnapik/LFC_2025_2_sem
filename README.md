@@ -3,26 +3,23 @@ Guilherme knapik - kingnapik
 Nome do grupo no Canvas: Grupo 3 - RA1
 
 
-# Calculadora de expressões RPN com AFD
-A mathematical expression calculator that uses finite state automata (DFA) for lexical analysis, evaluates expressions using RPN (Reverse Polish Notation), and generates Assembly code for Arduino UNO (ATmega328P).
+# Calculadora de expressões RPN com analisador léxico baseado em AFD
+O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notation) usando analisador léxico baseado em AFD (Autômato Finito Deterministico).
 
-## Features
+## Funcionamento
+1. O código deve ler um arquivo de texto contendo uma expressão por linha, todas escritas em formato RPN;
+2. Analisar as expressões usando o analisador léxico;
+3. Filtrar, validar e executar as operações;
+4. Gerar código Assembly AVR para execução em plataforma Arduino (microchip: ATmega328).
 
-- **Lexical Analysis**: Uses Deterministic Finite Automaton (DFA) to tokenize mathematical expressions
-- **Expression Evaluation**: Converts infix notation to postfix (RPN) and evaluates using stack-based approach
-- **Memory Support**: Multiple memory variables (any uppercase letter combination)
-- **Assembly Generation**: Generates ATmega328P assembly code for Arduino UNO
-- **File Processing**: Reads expressions from text files and processes them line by line
-- **Error Handling**: Comprehensive error checking for invalid expressions and syntax
-
-## Supported Operations
+## Operações aceitas
 
 - **Arithmetic**: `+`, `-`, `*`, `/`, `%`, `^` (power)
 - **Parentheses**: `(`, `)` for grouping expressions
 - **Memory Operations**: 
-  - `RES(n)`: Access the nth previous result
-  - Any uppercase letters (e.g., `A`, `MEM`, `VAR`): Memory variables
-- **Numbers**: Integer and decimal numbers (positive and negative)
+  - `(n RES)`: Acesso do resultado n linhas antes;
+  - `(MEM)`: Variaveis de memória;
+- **Numbers**: Inteiros ou float com precisão de 2 casas decimais (positivo e negativo)
 
 ## Usage
 
