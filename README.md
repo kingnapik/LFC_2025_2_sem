@@ -29,17 +29,20 @@ O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notati
 ## Uso
 
 ### compilando
+Tenha os arquivos de teste e executáveis no mesmo diretório.
+compile o arquivo pela linha de comando
 ```bash
 g++ -o analizador main24.cpp
 ```
 
 ### executando
+execute o arquivo passando o arquivo de teste desejado juntamente do executável na linha de comando
 ```bash
 ./analizador teste.txt
 ```
 
 ### Formato das operações
-Arquivo texto contendo operações no formato RPN:
+Arquivo de teste deve conter operações no formato RPN:
 ```
 (2 3 +)
 (4 7 *)
