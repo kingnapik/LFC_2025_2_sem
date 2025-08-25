@@ -1,10 +1,9 @@
-## Informação do Grupo
+# Informação do Grupo
 Guilherme knapik - kingnapik
 Nome do grupo no Canvas: Grupo 3 - RA1
 
 
-# Calculator with Finite State Automata and Assembly Generation
-
+# Calculadora de expressões RPN com AFD
 A mathematical expression calculator that uses finite state automata (DFA) for lexical analysis, evaluates expressions using RPN (Reverse Polish Notation), and generates Assembly code for Arduino UNO (ATmega328P).
 
 ## Features
