@@ -2,6 +2,9 @@
 Guilherme knapik - kingnapik
 Nome do grupo no Canvas: Grupo 3 - RA1
 
+Disciplina: Linguagem Formal de Compiladores
+Prof.: Frank Coelho de Alcantara
+
 
 # Calculadora de expressões RPN com analisador léxico baseado em AFD
 O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notation) usando analisador léxico baseado em AFD (Autômato Finito Deterministico).
@@ -12,53 +15,48 @@ O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notati
 3. Filtrar, validar e executar as operações;
 4. Gerar código Assembly AVR para execução em plataforma Arduino (microchip: ATmega328).
 
-## Operações aceitas
+## Operações aceitas (C++)
 
-- **Arithmetic**: `+`, `-`, `*`, `/`, `%`, `^` (power)
-- **Parentheses**: `(`, `)` for grouping expressions
-- **Memory Operations**: 
+- **Operadores**: `+`, `-`, `*`, `/`, `%`, `^`
+- **Parenteses**: `(`, `)` com suporte de aninhamento;
+- **Operações de Memória**: 
   - `(n RES)`: Acesso do resultado n linhas antes;
   - `(MEM)`: Variaveis de memória;
-- **Numbers**: Inteiros ou float com precisão de 2 casas decimais (positivo e negativo)
+- **Números**: Inteiros ou float com precisão de 2 casas decimais (positivo e negativo)
 
-## Usage
+## Uso
 
-### Compilation
+### compilando
 ```bash
-g++ -o calculator main24.cpp
+g++ -o analizador main24.cpp
 ```
 
-### Running
+### executando
 ```bash
-./calculator input.txt
+./analizador teste.txt
 ```
 
-### Input File Format
-Create a text file with mathematical expressions, one per line:
+### Formato das operações
+Arquivo texto contendo operações no formato RPN:
 ```
-2 + 3
-5 * (10 - 3)
-A = 15
-A + 5
-RES(1) * 2
+(2 3 +)
+(4 7 *)
+(10.1 3.23 /)
+((2 5 *) (20 0.2 +) /)
+...
 ```
 
-### Example Output
+### Exemplo de output
 ```
-Processando arquivo: input.txt
-Total de linhas: 5
+Processando arquivo: teste.txt
+Total de linhas: 1
 
-Linha 1: 2 + 3
-Tokens: 2 + 3
-Resultado: 5
-
-Linha 2: 5 * (10 - 3)
-Tokens: 5 * ( 10 - 3 )
-Resultado: 35
+Linha 1: (10 10 +)
+Tokens: ( 10 10 + ) 
+Resultado: 20
 
 === RESULTADOS ===
-Linha 1: 5
-Linha 2: 35
+Linha 1: 20
 ===================
 
 Arquivos gerados:
@@ -66,107 +64,40 @@ Arquivos gerados:
 - codigo.S (codigo Assembly de todas as operacoes corretas da execucao)
 ```
 
-## Generated Files
+## Arquivos gerados
 
-1. **tokens.txt**: Contains all valid tokens from the execution
-2. **codigo.S**: Assembly code for Arduino UNO implementing the calculations
+1. **tokens.txt**: Todos os tokens gerados a partir das expressões válidas.
+2. **codigo.S**: Código Assembly AVR
 
-## Assembly Code Limitations
+## Limitações ASM
 
-The generated Assembly code has several important limitations:
+A primeira versão do Gerador de código assembly tem algumas limitações em decorrencia do curto intervalo de tempo disponibilisado para pesquisa e desenvolvimento:
 
-### ⚠️ **Critical Limitations**
+#### 1. **Operações Limitadas**
+- **Suporte**: Adição (`+`) e Subtração (`-`)
+- **Suporte Limitado**: Multiplicação (`*`), Divisão (`/`) e Memória (`MEM`)
+- **Não Suporta**: Módulo (`%`), Potenciação (`^`) e Recall de Valor (`RES`)
+- As operações de multiplicação e divisão utilizam algoritmos simplificados, dessa maneira podem gerar resultados arrados quando usadas em números muito grandes (ver mais abaixo).
 
-#### 1. **Limited Arithmetic Operations**
-- **Only supports**: Addition (`+`) and subtraction (`-`)
-- **Does NOT support**: Multiplication (`*`), division (`/`), modulo (`%`), or power (`^`) operations
-- The Assembly generation code includes multiplication and division functions, but they are **incomplete and may not work correctly**
+#### 2. **Fixed-Point Arithmetic**
+- Todos os números são transformados em formato 'Fixed-Point' (multiplicados por 100 para tratar as casas decimais)
+- ex.: 3.14 se torna 314.
 
-#### 2. **Fixed-Point Arithmetic Only**
-- All numbers are converted to **fixed-point format** (multiplied by 100 for 2 decimal places)
-- **No floating-point support** - this significantly limits precision
-- Example: `3.14` becomes `314` in the Assembly code
+#### 3. **Memória limitada**
+- O código Assembly AVR permite apenas uma variavel de memória `MEM`
 
-#### 3. **Limited Memory Support**
-- Only supports **one memory variable** called `MEM`
-- The C++ evaluator supports multiple memory variables (`A`, `VAR`, etc.), but the Assembly only implements `MEM`
-- **Memory behavior differs** between C++ evaluation and Assembly generation
+#### 4. **Limitações de Integer 16bits**
+- Todos os valores são armazenados como 16bit ints (-32,768 to 32,767)
+- Após a conversão de ponto fixo, o range efetivo se torna **-327.68 to 327.67**
+- **Overflow/underflow se tornam um problema**
 
-#### 4. **16-bit Integer Limitations**
-- All values are stored as **16-bit signed integers** (-32,768 to 32,767)
-- After fixed-point conversion, the effective range is **-327.68 to 327.67**
-- **Overflow/underflow not properly handled**
+### 🔧 **Estrutura do Código Assembly**
 
-#### 5. **No RES() Function Support**
-- The Assembly code **does not implement** the `RES(n)` function
-- Expressions using `RES()` will be parsed by C++ but **ignored in Assembly generation**
+- **Comunicação UART** para output (9600 baud)
+- **RPN stack** em 64 bytes, 32 valores máximos
+- **Output em HEX**
 
-#### 6. **Simplified Expression Processing**
-- Complex expressions with multiple operations may **not be correctly translated**
-- The Assembly generator uses a **simplified RPN conversion** that may miss edge cases
+## Dependencias
 
-#### 7. **No Error Handling in Assembly**
-- **Division by zero**: Minimal error handling (returns error code `0xF1D8`)
-- **Stack overflow/underflow**: Not properly handled
-- **Invalid operations**: May cause undefined behavior
-
-#### 8. **Hardware-Specific Code**
-- Generated code is **specifically for ATmega328P** (Arduino UNO)
-- **Not portable** to other microcontrollers without modification
-- Uses **specific register names and memory addresses**
-
-### 🔧 **Assembly Code Structure**
-
-The generated Assembly code includes:
-- **UART communication** setup for output (9600 baud)
-- **RPN stack implementation** (64 bytes, 32 values max)
-- **Basic arithmetic functions** (addition, subtraction only)
-- **Memory variable support** (single `MEM` variable)
-- **Hexadecimal output formatting**
-
-### 📝 **Recommendation**
-
-**The Assembly generation feature should be considered experimental and is primarily useful for:**
-- Educational purposes to understand RPN evaluation in Assembly
-- Simple arithmetic expressions with only addition and subtraction
-- Learning ATmega328P Assembly programming
-
-**For production use:**
-- Use only the C++ expression evaluator
-- The Assembly code requires significant improvements to handle all supported operations
-- Consider the Assembly output as a **starting template** rather than a complete implementation
-
-## Technical Implementation
-
-### Finite State Automaton (DFA) States
-- `estadoInicial`: Entry state, dispatches to appropriate states
-- `estadoNumero`: Handles numeric tokens (integers and decimals)
-- `estadoOperador`: Handles arithmetic operators
-- `estadoParenteses`: Handles parentheses
-- `estadoComando`: Handles memory variables and commands
-
-### Expression Evaluation Process
-1. **Tokenization**: Input string → tokens using DFA
-2. **Validation**: Check parentheses balance and expression structure
-3. **Infix to Postfix**: Convert using Shunting Yard algorithm
-4. **Evaluation**: Stack-based RPN evaluation
-
-### Memory System
-- **Global memory map**: `map<string, float> memoria`
-- **Results history**: `vector<float> resultados`
-- **RES() function**: Access previous results by index
-
-## Error Handling
-
-The program handles various error conditions:
-- Invalid characters in input
-- Malformed numbers (multiple decimal points)
-- Unbalanced parentheses
-- Division by zero
-- Invalid RES() indices
-- File not found errors
-
-## Dependencies
-
-- C++11 or later
-- Standard libraries: `<vector>`, `<string>`, `<iostream>`, `<fstream>`, `<stack>`, `<map>`, `<algorithm>`, `<cmath>`
+- C++11 or mais recente
+- Standard libs: `<vector>`, `<string>`, `<iostream>`, `<fstream>`, `<stack>`, `<map>`, `<algorithm>`, `<cmath>`
