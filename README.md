@@ -30,10 +30,12 @@ O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notati
 
 ## Uso
 V1 - disponível dentro da pasta RA1, estão os códigos C++ assim como os arquivos de teste .txt;
+
 A versão mais atual do código Assembly AVR gerada pelo script C++ também se encontra na pasta;
 
 ### Compilando
 Tenha os arquivos de teste e executáveis no mesmo diretório.
+
 Compile o arquivo pela linha de comando
 ```bash
 g++ -o analizador main24.cpp
