@@ -5,6 +5,8 @@ Nome do grupo no Canvas: Grupo 3 - RA1
 
 Disciplina: Linguagem Formal de Compiladores
 
+Pontificia Universidade Católica do Paraná - PUC-PR
+
 Prof.: Frank Coelho de Alcantara
 
 
@@ -27,15 +29,17 @@ O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notati
 - **Números**: Inteiros ou float com precisão de 2 casas decimais (positivo e negativo)
 
 ## Uso
+V1 - disponível dentro da pasta RA1, estão os códigos C++ assim como os arquivos de teste .txt;
+A versão mais atual do código Assembly AVR gerada pelo script C++ também se encontra na pasta;
 
-### compilando
+### Compilando
 Tenha os arquivos de teste e executáveis no mesmo diretório.
-compile o arquivo pela linha de comando
+Compile o arquivo pela linha de comando
 ```bash
 g++ -o analizador main24.cpp
 ```
 
-### executando
+### Executando
 execute o arquivo passando o arquivo de teste desejado juntamente do executável na linha de comando
 ```bash
 ./analizador teste.txt
