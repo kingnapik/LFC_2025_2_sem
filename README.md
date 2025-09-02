@@ -29,7 +29,7 @@ O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notati
 - **Números**: Inteiros ou float com precisão de 2 casas decimais (positivo e negativo)
 
 ## Uso
-V1 - disponível dentro da pasta RA1, estão os códigos C++ assim como os arquivos de teste .txt;
+Versão 41 - disponível dentro da pasta RA1, estão o código C++ assim como os arquivos de teste .txt;
 
 A versão mais atual do código Assembly AVR gerada pelo script C++ também se encontra na pasta;
 
@@ -82,20 +82,20 @@ Arquivos gerados:
 
 ## Limitações ASM
 
-A primeira versão do Gerador de código assembly tem algumas limitações em decorrencia do curto intervalo de tempo disponibilisado para pesquisa e desenvolvimento:
+A atual versão do Gerador de código assembly tem algumas limitações:
 
 #### 1. **Operações Limitadas**
-- **Suporte**: Adição (`+`) e Subtração (`-`)
-- **Suporte Limitado**: Multiplicação (`*`), Divisão (`/`) e Memória (`MEM`)
-- **Não Suporta**: Módulo (`%`), Potenciação (`^`) e Recall de Valor (`RES`)
-- As operações de multiplicação e divisão utilizam algoritmos simplificados, dessa maneira podem gerar resultados arrados quando usadas em números muito grandes (ver mais abaixo).
+- **Suporte**: Adição (`+`), Subtração (`-`), Multiplicação (`*`), Divisão Real (`/`)
+- **Suporte Limitado**: Divisão Inteira (`/`), Potenciação (`^`) e Memória (`MEM`)
+- **Não Suporta**: Módulo (`%`) e Recall de Valor (`RES`)
+- As operações de multiplicação, divisão e potenciaçaõ utilizam algoritmos simplificados, dessa maneira podem gerar resultados arrados quando usadas em números muito grandes (ver mais abaixo). 
 
 #### 2. **Fixed-Point Arithmetic**
-- Todos os números são transformados em formato 'Fixed-Point' (multiplicados por 100 para tratar as casas decimais)
+- Todos os números são transformados em formato 'Fixed-Point' (multiplicados por 100 para tratar as casas decimais), exceto o exponencial da operação de potenciação por motivos de servir como contador de loop, dessa maneira ele é mantido como int.
 - ex.: 3.14 se torna 314.
 
 #### 3. **Memória limitada**
-- O código Assembly AVR permite apenas uma variavel de memória `MEM`
+- O código Assembly AVR permite apenas uma variavel de memória `MEM`.
 
 #### 4. **Limitações de Integer 16bits**
 - Todos os valores são armazenados como 16bit ints (-32,768 to 32,767)
@@ -107,8 +107,3 @@ A primeira versão do Gerador de código assembly tem algumas limitações em de
 - **Comunicação UART** para output (9600 baud)
 - **RPN stack** em 64 bytes, 32 valores máximos
 - **Output em HEX**
-
-## Dependencias
-
-- C++11 or mais recente
-- Standard libs: `<vector>`, `<string>`, `<iostream>`, `<fstream>`, `<stack>`, `<map>`, `<algorithm>`, `<cmath>`
