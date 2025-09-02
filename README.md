@@ -29,7 +29,7 @@ O trabalho consiste em uma calculadora de expressões RPN (Reverse Polish Notati
 - **Números**: Inteiros ou float com precisão de 2 casas decimais (positivo e negativo)
 
 ## Uso
-Versão 42 - disponível dentro da pasta RA1, estão o código C++ assim como os arquivos de teste .txt e os tokens gerados na última execução;
+Versão 42 - disponível **dentro do diretório RA1**, estão o código C++ assim como os arquivos de teste .txt e os tokens gerados na última execução;
 
 A versão mais atual do código Assembly AVR gerada pelo script C++ também se encontra na pasta;
 
