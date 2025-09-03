@@ -444,7 +444,7 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    \n";
     assembly << "    mov ZL, temp\n"; //passa o novo ponteiro para o par Z
     assembly << "    clr ZH\n";
-    assembly << "    lsl ZL
+    assembly << "    lsl ZL\n";
     assembly << "    rol ZH\n";
     assembly << "    subi ZL, lo8(-(rpn_stack))\n"; //Z apontando para o elemento que tem que ser tirado
     assembly << "    sbci ZH, hi8(-(rpn_stack))\n";
@@ -896,4 +896,5 @@ int main(int argc, char* argv[]) {
     return 0;
 
 }
+
 
