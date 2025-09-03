@@ -4,16 +4,16 @@ grupo 3 RA1
 */
 #include <vector>
 #include <string>
-#include <cctype>
-#include <stdexcept>
+#include <cctype> //manipular caracter individualmente
+#include <stdexcept> //excessoes
 #include <iostream>
-#include <fstream>
+#include <fstream> //arquivos
 #include <stack>
-#include <sstream>
-#include <cmath>
-#include <map>
-#include <algorithm>
-#include <iomanip>
+#include <sstream> //string stream
+#include <cmath> //matematica
+#include <map> //vai mapear as multiplas MEMs
+//#include <algorithm>
+#include <iomanip> //formatando saida
 
 using namespace std;
 
@@ -266,7 +266,6 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     
     assembly << "#include <avr/io.h>\n\n";
     
-    // definições de registradores
     assembly << "; === DEFINICOES DE REGISTRADORES ===\n";
     assembly << "#define temp     r16\n";
     assembly << "#define temp2    r17\n";
@@ -275,7 +274,6 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "#define op_l     r20\n";
     assembly << "#define op_h     r21\n\n";
     
-    // área de dados
     assembly << "; === AREA DE DADOS ===\n";
     assembly << ".section .bss\n";
     assembly << "rpn_stack:     .space 64  ; Pilha RPN (32 valores de 16-bit)\n";
@@ -285,7 +283,6 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << ".section .text\n";
     assembly << ".global main\n\n";
     
-    // função principal
     assembly << "main:\n";
     assembly << "    ; Inicializar sistema\n";
     assembly << "    ldi temp, lo8(RAMEND)\n";
@@ -293,14 +290,14 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    ldi temp, hi8(RAMEND)\n";
     assembly << "    out _SFR_IO_ADDR(SPH), temp\n\n";
     
-    assembly << "    ; Zerar stack pointer e memoria\n";
+    assembly << "    ; Zera stack pointer e memoria\n";
     assembly << "    clr temp\n";
     assembly << "    sts stack_ptr, temp\n";
-    assembly << "    sts memory_var, temp      ; MEM = 0 inicialmente\n";
+    assembly << "    sts memory_var, temp      ; MEM = 0\n";
     assembly << "    sts memory_var+1, temp\n\n";
     
-    assembly << "    ; Inicializar UART (9600 baud @ 16MHz)\n";
-    assembly << "    ldi temp, 103             ; UBRR = 103 para 9600 baud\n";
+    assembly << "    ; Inicial UART (9600 baud @ 16MHz)\n";
+    assembly << "    ldi temp, 103             ; 103 = 9600 baud\n";
     assembly << "    sts UBRR0L, temp\n";
     assembly << "    clr temp\n";
     assembly << "    sts UBRR0H, temp\n";
@@ -309,29 +306,28 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    ldi temp, (1<<UCSZ01)|(1<<UCSZ00)  ; 8-bit data\n";
     assembly << "    sts UCSR0C, temp\n\n";
     
-    // processa expressões RPN
+    //processa expressoes RPN
     int expr_num = 1;
     for (const auto& tokens : todasExpressoes) {
         assembly << "    ; === EXPRESSAO " << expr_num << " ===\n";
         
-        // OTIMIZAÇÃO: só reseta se não é a primeira expressão
+        //so reseta se não é a primeira expressão
         if (expr_num > 1) {
             assembly << "    clr temp\n";
             assembly << "    sts stack_ptr, temp\n\n";
         }
         
-        // processar tokens - MANTENDO SUAS OPERAÇÕES ORIGINAIS
+        //processamento de tokens
         for (size_t i = 0; i < tokens.size(); i++) {
             const auto& token = tokens[i];
 
             if (isdigit(token[0]) || (token[0] == '-' && token.size() > 1)) {
-                // número: converter para fixed-point
+                //se número: converter para fixed-point
                 float valor = stof(token);
                 int fixed_val;
 
-                bool potExp = false; //se o valor for seguido por ^ entao e exponente de potenciacao, logo, preciso que seja 2 e nao 200 por conta do fixed ponit
-                if (i + 1 < tokens.size() && tokens[i + 1]=="^"){ //entao, se for exponente, so passa o valor como int e pronto
-                    fixed_val = (int)valor;
+                if (i + 1 < tokens.size() && tokens[i + 1]=="^"){ //se o valor for seguido por ^ entao e exponente de potenciacao, logo, preciso que seja 2 e nao 200 por conta do fixed ponit
+                    fixed_val = (int)valor;//entao, se for exponente, so passa o valor como int e pronto
                     //cout << i << ": " << valor << endl;
                 }
                 else{
@@ -340,7 +336,7 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
                 }
 
                 //cout << fixed_val << endl;
-                assembly << "    ; Push: " << token << " -> " << fixed_val;
+                assembly << "    ; Push: " << token << " -> " << fixed_val; //passando num para a pilha para serem usados dpeois nas subrotinas
                 if (fixed_val < 0) {
                     assembly << " (negative)";
                     int16_t signed_val = (int16_t)fixed_val;
@@ -355,17 +351,18 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
                 }
                 assembly << "    rcall stack_push\n\n";
             }
+            //call de operacoes, al ogica e quase a mesma para todas elas, difere se vai chamar subrrotina ou nao
             else if (token == "+") {
-                assembly << "    ; Adicao\n";
-                assembly << "    rcall stack_pop    ; op2\n";
-                assembly << "    mov op_l, val_l\n";
+                assembly << "    ; Adicao\n"; //A B +
+                assembly << "    rcall stack_pop    ; op2\n"; //tira da pilha o B
+                assembly << "    mov op_l, val_l\n"; //guarda a parte baixa e alta de B
                 assembly << "    mov op_h, val_h\n";
-                assembly << "    rcall stack_pop    ; op1\n";
-                assembly << "    add val_l, op_l\n";
-                assembly << "    adc val_h, op_h\n";
-                assembly << "    rcall stack_push\n\n";
+                assembly << "    rcall stack_pop    ; op1\n"; //tira da pilha o A
+                assembly << "    add val_l, op_l\n"; //soma partes baixas
+                assembly << "    adc val_h, op_h\n"; //soma COM CARRY a parte alta
+                assembly << "    rcall stack_push\n\n"; //retorna para a pilha o resultado
             }
-            else if (token == "-") {
+            else if (token == "-") { //essencialmente a mesma coisa que add mas com sub
                 assembly << "    ; Subtracao\n";
                 assembly << "    rcall stack_pop    ; op2\n";
                 assembly << "    mov op_l, val_l\n";
@@ -377,14 +374,14 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
             }
             else if (token == "*") {
                 assembly << "    ; Multiplicacao\n";
-                assembly << "    rcall stack_pop    ; op2\n";
-                assembly << "    mov op_l, val_l\n";
+                assembly << "    rcall stack_pop    ; op2\n"; //tira B da pilha
+                assembly << "    mov op_l, val_l\n"; //passa parte alta e baixa de B
                 assembly << "    mov op_h, val_h\n";
-                assembly << "    rcall stack_pop    ; op1\n";
-                assembly << "    rcall mul16x16\n";
+                assembly << "    rcall stack_pop    ; op1\n"; //tira A
+                assembly << "    rcall mul16x16\n"; //chama a subrotina
                 assembly << "    rcall stack_push\n\n";
             }
-            else if (token == "/") {
+            else if (token == "/") { //mesma logica que *
                 assembly << "    ; Divisao\n";
                 assembly << "    rcall stack_pop    ; op2\n";
                 assembly << "    mov op_l, val_l\n";
@@ -393,16 +390,16 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
                 assembly << "    rcall div16x16\n";
                 assembly << "    rcall stack_push\n\n";
             }
-            else if (token == "^") {
+            else if (token == "^") { //mesma logica que *
                 assembly << "    ; Potencia (a ^ b)\n";
-                assembly << "    rcall stack_pop    ; op2 = exponent (b) -> val_l:val_h\n";
-                assembly << "    mov op_l, val_l    ; put exponent in op_l/op_h for pow()\n";
+                assembly << "    rcall stack_pop    ; op2\n";
+                assembly << "    mov op_l, val_l\n";
                 assembly << "    mov op_h, val_h\n";
-                assembly << "    rcall stack_pop    ; base (a) -> val_l:val_h\n";
-                assembly << "    rcall pow16x16_int ; computes val = base^exponent\n";
-                assembly << "    rcall stack_push   ; push result\n";
+                assembly << "    rcall stack_pop    ; op1\n";
+                assembly << "    rcall pow16x16_int\n";
+                assembly << "    rcall stack_push\n";
             }
-            else if (token == "MEM") {
+            else if (token == "MEM") { //cahma a subrotina MEM
                 assembly << "    ; Comando MEM\n";
                 assembly << "    rcall handle_mem\n\n";
             }
@@ -411,7 +408,7 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
         // resultado e impressão
         assembly << "    ; Resultado final\n";
         assembly << "    rcall stack_pop\n";
-        assembly << "    rcall print_hex_result\n";  // MANTENDO SEU ORIGINAL
+        assembly << "    rcall print_hex_result\n";
         assembly << "    rcall print_newline\n\n";
         
         expr_num++;
@@ -420,78 +417,78 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "main_loop:\n";
     assembly << "    rjmp main_loop\n\n";
     
-    // ===== SUBROTINAS (SUAS ORIGINAIS) =====
     assembly << "; ========== SUBROTINAS ==========\n\n";
-    
-    // Push na pilha RPN (SUA VERSÃO ORIGINAL)
+    //LIMITE DA PILHA DE 32 NUMEROS por conta da resolucao de 16bits
     assembly << "stack_push:\n";
     assembly << "    ; val_h:val_l -> pilha\n";
-    assembly << "    lds ZL, stack_ptr\n";
+    assembly << "    lds ZL, stack_ptr\n"; //passando o ponteiro para ZL e zerando o ZH, fazemos o parzinho Z e enderacamos direto para ele
     assembly << "    clr ZH\n";
-    assembly << "    lsl ZL                    ; * 2 (16-bit values)\n";
+    assembly << "    lsl ZL\n"; //shift e necessario por conta de serem 2 bytes independentes tendo que ser um em sequencia do outro.
     assembly << "    rol ZH\n";
-    assembly << "    subi ZL, lo8(-(rpn_stack))\n";
+    assembly << "    subi ZL, lo8(-(rpn_stack))\n"; //posicao na RAM onde sera salvo
     assembly << "    sbci ZH, hi8(-(rpn_stack))\n";
-    assembly << "    st Z+, val_l\n";
-    assembly << "    st Z, val_h\n";
+    assembly << "    st Z+, val_l\n"; //escrve o val baixo e sobe pos de Z
+    assembly << "    st Z, val_h\n"; //escreve val alto
     assembly << "    \n";
-    assembly << "    ; Incrementar stack pointer\n";
+    assembly << "    ; Incrementar stack pointer\n"; //aumenta o ponteiro e retorna para a pilha
     assembly << "    lds temp, stack_ptr\n";
     assembly << "    inc temp\n";
     assembly << "    sts stack_ptr, temp\n";
     assembly << "    ret\n\n";
     
-    // Pop da pilha RPN (SUA VERSÃO ORIGINAL)
     assembly << "stack_pop:\n";
-    assembly << "    ; pilha -> val_h:val_l\n";
+    assembly << "    ; pilha -> val_h:val_l\n"; //le a pilha, o processo e o mesmo que o push, so que ao contrario
     assembly << "    lds temp, stack_ptr\n";
-    assembly << "    dec temp\n";
+    assembly << "    dec temp\n"; //decrementa stack_poiter
     assembly << "    sts stack_ptr, temp\n";
     assembly << "    \n";
-    assembly << "    mov ZL, temp\n";
+    assembly << "    mov ZL, temp\n"; //passa o novo ponteiro para o par Z
     assembly << "    clr ZH\n";
-    assembly << "    lsl ZL                    ; * 2 (16-bit values)\n";
+    assembly << "    lsl ZL
     assembly << "    rol ZH\n";
-    assembly << "    subi ZL, lo8(-(rpn_stack))\n";
+    assembly << "    subi ZL, lo8(-(rpn_stack))\n"; //Z apontando para o elemento que tem que ser tirado
     assembly << "    sbci ZH, hi8(-(rpn_stack))\n";
-    assembly << "    ld val_l, Z+\n";
+    assembly << "    ld val_l, Z+\n"; //le o low e hgih
     assembly << "    ld val_h, Z\n";
     assembly << "    ret\n\n";
-    
-    // SUA MULTIPLICAÇÃO ORIGINAL (QUE FUNCIONAVA!)
+
+    //multiplicacao *
     assembly << "mul16x16:\n";
     assembly << "    ; 16x16 multiplication with fixed-point division by 100\n";
     assembly << "    ; Input: val_h:val_l and op_h:op_l\n";
     assembly << "    ; Output: val_h:val_l = (val * op) / 100\n";
+    //preserva estado atual dos regs na pilha, isso e preciso pois vamos manipular eles 
     assembly << "    push r18\n";
     assembly << "    push r22\n";
     assembly << "    push r23\n";
     assembly << "    push r26\n";
     assembly << "    push r27\n";
     assembly << "    \n";
-    assembly << "    ; Save signs and convert to absolute values\n";
-    assembly << "    clr r18                    ; Sign flag\n";
-    assembly << "    sbrs val_h, 7              ; Check if val is negative\n";
-    assembly << "    rjmp mul16_check_op\n";
-    assembly << "    com val_l                  ; Negate val\n";
+    assembly << "    clr r18\n"; //flag serial para negativos setado pra 0
+    assembly << "    sbrs val_h, 7\n"; //check bit 7, se tiver set e negativo e nao pula. se 0 e positivo e pula
+    assembly << "    rjmp mul16_check_op\n"; //para checar o operador
+    //passa para positivo com o complemento do numero
+    assembly << "    com val_l\n"; 
     assembly << "    com val_h\n";
-    assembly << "    subi val_l, 255            ; Add 1\n";
+    assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
-    assembly << "    inc r18                    ; Toggle sign\n";
+    //aumenta contador de negativos em 1
+    assembly << "    inc r18\n";
+    //faz o check do operador, mesmo processo que acima ^^^
     assembly << "mul16_check_op:\n";
-    assembly << "    sbrs op_h, 7               ; Check if op is negative\n";
+    assembly << "    sbrs op_h, 7\n";
     assembly << "    rjmp mul16_do_mult\n";
-    assembly << "    com op_l                   ; Negate op\n";
+    assembly << "    com op_l\n";
     assembly << "    com op_h\n";
-    assembly << "    subi op_l, 255             ; Add 1\n";
+    assembly << "    subi op_l, 255\n";
     assembly << "    sbci op_h, 255\n";
-    assembly << "    inc r18                    ; Toggle sign\n";
+    assembly << "    inc r18\n";
     assembly << "    \n";
-    assembly << "mul16_do_mult:\n";
-    assembly << "    ; 16x16 -> 32-bit multiplication\n";
+    assembly << "mul16_do_mult:\n"; //A × B = (AH × 256 + AL) × (BH × 256 + BL)
+    assembly << "    ; 16x16 -> 32-bit\n";
     assembly << "    mul val_l, op_l            ; AL * BL\n";
-    assembly << "    movw r26, r0               ; r27:r26 = low result\n";
-    assembly << "    clr r23                    ; r23 = high extension\n";
+    assembly << "    movw r26, r0\n";
+    assembly << "    clr r23\n";
     assembly << "    \n";
     assembly << "    mul val_l, op_h            ; AL * BH\n";
     assembly << "    add r27, r0\n";
@@ -504,51 +501,45 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    mul val_h, op_h            ; AH * BH\n";
     assembly << "    add r23, r0\n";
     assembly << "    \n";
-    assembly << "    ; Divide by 100 using repeated subtraction\n";
-    assembly << "    clr val_l                  ; Initialize quotient\n";
+    assembly << "    clr val_l\n";
     assembly << "    clr val_h\n";
-    assembly << "    clr r1                     ; Make sure r1 is zero\n";
+    assembly << "    clr r1\n";
     assembly << "    \n";
-    assembly << "mul16_div100:\n";
-    assembly << "    ; Check if remainder >= 100\n";
+    assembly << "mul16_div100:\n"; //subtracao repetida de 100 para poder restaurar valor para estado antes do fixed point fix. quando restar menos que 100, termina a rotina
     assembly << "    cpi r26, 100\n";
     assembly << "    cpc r27, r1\n";
     assembly << "    cpc r23, r1\n";
-    assembly << "    brlo mul16_div_done        ; If < 100, done\n";
+    assembly << "    brlo mul16_div_done\n"; //comando branch if lower. se for menor que 100 ta pronto
     assembly << "    \n";
-    assembly << "    ; Subtract 100\n";
     assembly << "    subi r26, 100\n";
     assembly << "    sbci r27, 0\n";
     assembly << "    sbci r23, 0\n";
     assembly << "    \n";
-    assembly << "    ; Increment quotient\n";
-    assembly << "    subi val_l, 255            ; Add 1\n";
+    assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
     assembly << "    \n";
     assembly << "    rjmp mul16_div100\n";
     assembly << "    \n";
-    assembly << "mul16_div_done:\n";
-    assembly << "    ; Check for rounding (if remainder >= 50)\n";
-    assembly << "    cpi r26, 50\n";
+    assembly << "mul16_div_done:\n"; //terminada a divisao, ver se tem que arredondar. se o que sobrar for mais que 50, arredonda pra cima
+    assembly << "    cpi r26, 50\n"; //vale ressaltar que isso esta olhando para os valores depois do segundo casa decimal. ex.: 105550 depois de dividido da 1055 e sobra 50, ai vira 1056, que e 10.5550 sendo arredondado para 10.56
     assembly << "    brlo mul16_no_round\n";
-    assembly << "    subi val_l, 255            ; Round up\n";
+    assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
     assembly << "    \n";
-    assembly << "mul16_no_round:\n";
-    assembly << "    ; Restore sign using r18\n";
-    assembly << "    sbrc r18, 0                ; Check sign flag\n";
+    assembly << "mul16_no_round:\n"; //retaurando o sinal de menos se tiver
+    assembly << "    sbrc r18, 0\n"; //se 0 ambos positivos e resultado positivo, se 1 tem negativo e positivo e resultado e negativo, se 2 ambos negativos e resultado e positivo
     assembly << "    rjmp mul16_negate\n";
     assembly << "    rjmp mul16_done\n";
     assembly << "    \n";
     assembly << "mul16_negate:\n";
     assembly << "    com val_l\n";
     assembly << "    com val_h\n";
-    assembly << "    subi val_l, 255            ; Add 1\n";
+    assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
     assembly << "    \n";
     assembly << "mul16_done:\n";
-    assembly << "    clr r1                     ; AVR convention\n";
-    assembly << "    pop r27\n";
+    assembly << "    clr r1\n"; //restaura r1 para 0 por boas praticas
+    assembly << "    pop r27\n"; //retorna regs em ordme inversa
     assembly << "    pop r26\n";
     assembly << "    pop r23\n";
     assembly << "    pop r22\n";
@@ -559,70 +550,68 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    ; 16x16 division with fixed-point multiplication by 100\n";
     assembly << "    ; Input: val_h:val_l (dividend, scaled x100) and op_h:op_l (divisor, scaled x100)\n";
     assembly << "    ; Output: val_h:val_l = (val * 100) / op\n";
+    //mesma coisa, preservando os registradores
     assembly << "    push r18\n";
     assembly << "    push r19\n";
-    assembly << "    push r20\n";   // (op_l) saved, but we won't clobber it anymore
-    assembly << "    push r21\n";   // (op_h)
+    assembly << "    push r20\n";
+    assembly << "    push r21\n";
     assembly << "    push r22\n";
     assembly << "    push r23\n";
     assembly << "    push r26\n";
     assembly << "    push r27\n";
     assembly << "\n";
-    assembly << "    clr r1                     ; ensure zero reg for adc/cpc\n";
+    assembly << "    clr r1\n"; //garantindo que r1 foi limpo
     assembly << "\n";
-    assembly << "    ; Save signs and convert to absolute values\n";
-    assembly << "    clr r18                    ; Sign parity flag\n";
-    assembly << "    sbrs val_h, 7              ; if dividend negative\n";
+    //mesmo gerencia de sinal que na multiplicacao
+    assembly << "    clr r18\n";
+    assembly << "    sbrs val_h, 7\n";
     assembly << "    rjmp div16_check_divisor\n";
-    assembly << "    com val_l                  ; negate dividend\n";
+    assembly << "    com val_l\n";
     assembly << "    com val_h\n";
-    assembly << "    subi val_l, 255            ; +1\n";
+    assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
     assembly << "    inc r18\n";
     assembly << "div16_check_divisor:\n";
-    assembly << "    sbrs op_h, 7               ; if divisor negative\n";
+    assembly << "    sbrs op_h, 7\n";
     assembly << "    rjmp div16_make_num\n";
-    assembly << "    com op_l                   ; negate divisor\n";
+    assembly << "    com op_l\n";
     assembly << "    com op_h\n";
-    assembly << "    subi op_l, 255             ; +1\n";
+    assembly << "    subi op_l, 255\n";
     assembly << "    sbci op_h, 255\n";
     assembly << "    inc r18\n";
     assembly << "\n";
+    
     assembly << "div16_make_num:\n";
-    assembly << "    ; Build 24-bit numerator N = val * 100 into r23:r27:r26\n";
     assembly << "    clr r26\n";
     assembly << "    clr r27\n";
     assembly << "    clr r23\n";
-    assembly << "    ldi r19, 100               ; loop counter\n";
+    assembly << "    ldi r19, 100\n"; //contador de iteracao
+    //necessario multiplicar por 100 por conta da "escalabilidade" do fixed point. ex.: 6 / 2. sem mult extra 600 / 200 = 3, que e 0.03. agora ocm a correcao: (600 * 100) / 200 = 300, que e o 3.00 esperado
     assembly << "div16_mult_loop:\n";
-    assembly << "    add r26, val_l             ; N += val (low)\n";
-    assembly << "    adc r27, val_h             ; N += val (high)\n";
-    assembly << "    adc r23, r1                ; carry into top byte\n";
+    assembly << "    add r26, val_l\n";
+    assembly << "    adc r27, val_h\n";
+    assembly << "    adc r23, r1\n";
     assembly << "    dec r19\n";
     assembly << "    brne div16_mult_loop\n";
     assembly << "\n";
-    assembly << "    ; Now divide N (24-bit) by op (16-bit) via repeated subtraction\n";
-    assembly << "    clr val_l                  ; quotient low\n";
-    assembly << "    clr val_h                  ; quotient high\n";
+    assembly << "    clr val_l\n";
+    assembly << "    clr val_h\n";
     assembly << "\n";
+    //divisao por subtracao repetidas, quantas vezes N cabe em op
     assembly << "div16_loop:\n";
-    assembly << "    ; if N < op then done (compare r23:r27:r26 with 0:op_h:op_l)\n";
     assembly << "    cp  r26, op_l\n";
     assembly << "    cpc r27, op_h\n";
     assembly << "    cpc r23, r1\n";
-    assembly << "    brlo div16_div_done\n";
-    assembly << "    ; N -= op\n";
+    assembly << "    brlo div16_div_done\n"; //se o N for menos que o op termina
     assembly << "    sub r26, op_l\n";
     assembly << "    sbc r27, op_h\n";
     assembly << "    sbc r23, r1\n";
-    assembly << "    ; quotient++\n";
     assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
     assembly << "    rjmp div16_loop\n";
     assembly << "\n";
     assembly << "div16_div_done:\n";
-    assembly << "    ; Restore sign if odd number of negations\n";
-    assembly << "    sbrc r18, 0\n";
+    assembly << "    sbrc r18, 0\n"; //restaura o sinal. se ele estiver em set (1), e negativo, se clear (0 ou 2) e positivo
     assembly << "    rjmp div16_negate\n";
     assembly << "    rjmp div16_done\n";
     assembly << "\n";
@@ -632,8 +621,8 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    subi val_l, 255\n";
     assembly << "    sbci val_h, 255\n";
     assembly << "\n";
-    assembly << "div16_done:\n";
-    assembly << "    clr r1                     ; ABI\n";
+    assembly << "div16_done:\n"; //clear do r1 e restauro dos registradores
+    assembly << "    clr r1\n";
     assembly << "    pop r27\n";
     assembly << "    pop r26\n";
     assembly << "    pop r23\n";
@@ -649,47 +638,40 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    push r28\n";
     assembly << "    push r29\n";
     assembly << "\n";
-    assembly << "    ; Get exponent into r28\n";
     assembly << "    mov r28, op_l\n";
     assembly << "\n";
-    assembly << "    ; Handle exponent = 0: return 1\n";
-    assembly << "    cpi r28, 0\n";
+    assembly << "    cpi r28, 0\n"; // exp = 0, retorna 1
     assembly << "    breq pow_ret_one\n";
     assembly << "\n";
-    assembly << "    ; Handle exponent = 1: return base\n";
-    assembly << "    cpi r28, 1\n";
-    assembly << "    breq pow_ret_base\n";
+    assembly << "    cpi r28, 1\n"; // exp = 1 retrorna a base
+    assembly << "    breq pow_done\n"; //antes ele pulava para a retorna base, mas se tornu inutil, entao vai direto para resultado
     assembly << "\n";
-    assembly << "    ; Store base in r29:r30 (use high registers)\n";
     assembly << "    mov r29, val_l\n";
     assembly << "    mov r30, val_h\n";
     assembly << "\n";
-    assembly << "    ; Result starts as base (first multiplication)\n";
-    assembly << "    ; val_l:val_h already contains base\n";
-    assembly << "    dec r28              ; We already have base^1\n";
+    assembly << "    dec r28\n"; //decrementa 1 porque ja temos o A^1 sendo a base
     assembly << "\n";
     assembly << "pow_loop:\n";
-    assembly << "    ; Check if done\n";
-    assembly << "    cpi r28, 0\n";
+    assembly << "    cpi r28, 0\n"; //se der 0 terminou
     assembly << "    breq pow_done\n";
     assembly << "\n";
-    assembly << "    ; Multiply result by base\n";
-    assembly << "    mov op_l, r29        ; base low\n";
-    assembly << "    mov op_h, r30        ; base high\n";
+    // carrega a base e multiplica o resultado pela base, ja que ex.: 2^3 é 2*2*2 entao base 2 * ela mesma 2 da 4. carrega esse e multiplica denovo por 2. deu 8 e encerrou
+    assembly << "    mov op_l, r29\n";
+    assembly << "    mov op_h, r30\n";
     assembly << "    rcall mul16x16\n";
     assembly << "\n";
-    assembly << "    ; Decrement counter\n";
-    assembly << "    dec r28\n";
+    assembly << "    dec r28\n"; //decrementa cada vez que multiplica
     assembly << "    rjmp pow_loop\n";
     assembly << "\n";
     assembly << "pow_ret_one:\n";
-    assembly << "    ldi val_l, 100       ; 1.00 in fixed point\n";
+    assembly << "    ldi val_l, 100\n"; //retorna 1 em fixed point.
     assembly << "    clr val_h\n";
     assembly << "    rjmp pow_done\n";
-    assembly << "\n";
-    assembly << "pow_ret_base:\n";
-    assembly << "    ; val_l:val_h already contains base\n";
-    assembly << "    rjmp pow_done\n";
+// logica velha deixada para artefato
+//    assembly << "\n";
+//    assembly << "pow_ret_base:\n";
+//    assembly << "    ; val_l:val_h already contains base\n";
+//    assembly << "    rjmp pow_done\n";
     assembly << "\n";
     assembly << "pow_done:\n";
     assembly << "    pop r29\n";
@@ -697,103 +679,87 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     assembly << "    ret\n";
     assembly << "\n";
 
-    // MEM handling (SUA VERSÃO ORIGINAL)
     assembly << "handle_mem:\n";
-    assembly << "    ; MEM pode ser: armazenar (se tem valor na pilha) ou carregar (se pilha vazia)\n";
     assembly << "    lds temp, stack_ptr\n";
     assembly << "    cpi temp, 0\n";
-    assembly << "    breq load_mem              ; Se pilha vazia, carregar MEM\n";
+    assembly << "    breq load_mem\n"; //se pilha vasia, carrega MEM
     assembly << "    \n";
-    assembly << "    ; ARMAZENAR: pop valor e salvar em MEM\n";
-    assembly << "store_mem:\n";
+    assembly << "store_mem:\n"; //guardar valor
     assembly << "    rcall stack_pop\n";
     assembly << "    sts memory_var, val_l\n";
     assembly << "    sts memory_var+1, val_h\n";
-    assembly << "    rcall stack_push           ; Push valor de volta\n";
+    assembly << "    rcall stack_push\n"; //push devolta o valor
     assembly << "    ret\n";
     assembly << "    \n";
-    assembly << "load_mem:\n";
-    assembly << "    ; CARREGAR: ler valor de MEM e fazer push\n";
+    assembly << "load_mem:\n"; //le valor e faz outro push
     assembly << "    lds val_l, memory_var\n";
     assembly << "    lds val_h, memory_var+1\n";
     assembly << "    rcall stack_push\n";
     assembly << "    ret\n\n";
     
-    // SUA FUNÇÃO PRINT_HEX_RESULT ORIGINAL
     assembly << "print_hex_result:\n";
-    assembly << "    ; Check if negative (MSB set)\n";
-    assembly << "    sbrs val_h, 7\n";
+    assembly << "    sbrs val_h, 7\n"; //check se positivo ou negativo do mesmo jeito
     assembly << "    rjmp print_positive\n";
     assembly << "    \n";
-    assembly << "    ; Print minus sign for negative\n";
-    assembly << "    ldi temp, '-'\n";
+    assembly << "    ldi temp, '-'\n"; //print - se negativo
     assembly << "    rcall uart_send\n";
     assembly << "    \n";
-    assembly << "    ; Convert to positive (two's complement)\n";
-    assembly << "    com val_l\n";
+    assembly << "    com val_l\n"; //converte positivo para poder mostrar 
     assembly << "    com val_h\n";
     assembly << "    subi val_l, -1\n";
     assembly << "    sbci val_h, -1\n";
     assembly << "    \n";
     assembly << "print_positive:\n";
-    assembly << "    ; Print \"0x\" prefix\n";
-    assembly << "    ldi temp, '0'\n";
+    assembly << "    ldi temp, '0'\n"; //print do 0X de hex
     assembly << "    rcall uart_send\n";
     assembly << "    ldi temp, 'x'\n";
     assembly << "    rcall uart_send\n";
     assembly << "    \n";
-    assembly << "    ; Print high byte in hex\n";
+    //print high
     assembly << "    mov temp, val_h\n";
     assembly << "    rcall print_hex_byte\n";
     assembly << "    \n";
-    assembly << "    ; Print low byte in hex\n";
+    //print low
     assembly << "    mov temp, val_l\n";
     assembly << "    rcall print_hex_byte\n";
     assembly << "    ret\n\n";
     
-    // SUA FUNÇÃO PRINT_HEX_BYTE ORIGINAL
     assembly << "print_hex_byte:\n";
-    assembly << "    ; Print one byte in hex (2 digits)\n";
     assembly << "    push temp\n";
     assembly << "    \n";
-    assembly << "    ; High nibble\n";
+    //parte alta
     assembly << "    mov temp2, temp\n";
     assembly << "    swap temp2\n";
     assembly << "    andi temp2, 0x0F\n";
     assembly << "    cpi temp2, 10\n";
     assembly << "    brlo hex_high_digit\n";
-    assembly << "    ; Letter A-F\n";
-    assembly << "    subi temp2, -55          ; Convert 10-15 to 'A'-'F'\n";
+    assembly << "    subi temp2, -55\n"; //converte a~f para 10~15 formula --> ASCII('A' + n-10) = n + 55
     assembly << "    rjmp hex_high_send\n";
     assembly << "hex_high_digit:\n";
-    assembly << "    ; Digit 0-9\n";
-    assembly << "    subi temp2, -48          ; Convert 0-9 to '0'-'9'\n";
+    assembly << "    subi temp2, -48\n"; //0~9 para 0~9 em ascii formula --> ASCII('n') = n + 48
     assembly << "hex_high_send:\n";
     assembly << "    mov temp, temp2\n";
     assembly << "    rcall uart_send\n";
     assembly << "    \n";
-    assembly << "    ; Low nibble\n";
+    //parte baixa, mesma logica
     assembly << "    pop temp\n";
     assembly << "    andi temp, 0x0F\n";
     assembly << "    cpi temp, 10\n";
     assembly << "    brlo hex_low_digit\n";
-    assembly << "    ; Letter A-F\n";
-    assembly << "    subi temp, -55           ; Convert 10-15 to 'A'-'F'\n";
+    assembly << "    subi temp, -55\n";
     assembly << "    rjmp hex_low_send\n";
     assembly << "hex_low_digit:\n";
-    assembly << "    ; Digit 0-9\n";
-    assembly << "    subi temp, -48           ; Convert 0-9 to '0'-'9'\n";
+    assembly << "    subi temp, -48'\n";
     assembly << "hex_low_send:\n";
     assembly << "    rcall uart_send\n";
     assembly << "    ret\n\n";
     
-    // SUAS FUNÇÕES ORIGINAIS DE PRINT
-    assembly << "print_newline:\n";
+    assembly << "print_newline:\n"; //pula linha
     assembly << "    ldi temp, '\\n'\n";
     assembly << "    rcall uart_send\n";
     assembly << "    ret\n\n";
     
-    assembly << "uart_send:\n";
+    assembly << "uart_send:\n"; //manda para o serial
     assembly << "uart_wait:\n";
     assembly << "    lds temp2, UCSR0A\n";
     assembly << "    sbrs temp2, UDRE0\n";
@@ -804,7 +770,7 @@ void gerarAssembly(const vector<vector<string>>& todasExpressoes, string& codigo
     codigoAssembly = assembly.str();
 }
 
-void lerArquivo(string nomeArquivo, vector<string>& linhas) {
+void lerArquivo(string nomeArquivo, vector<string>& linhas) { //le o arquivo, autoexplicativo
     ifstream arquivo(nomeArquivo);
     if (!arquivo.is_open()) {
         throw invalid_argument("Erro: arquivo nao encontrado ou invalido '" + nomeArquivo + "'");
@@ -820,7 +786,7 @@ void lerArquivo(string nomeArquivo, vector<string>& linhas) {
     arquivo.close();
 }
 
-void exibirResultados(const vector<float>& resultados) {
+void exibirResultados(const vector<float>& resultados) { //exibe no prompt, tbm autoexplicativo
     cout << "\n=== RESULTADOS ===" << endl;
     for (size_t i = 0; i < resultados.size(); i++) {
         cout << "Linha " << (i + 1) << ": " << fixed << setprecision(2) << resultados[i] << endl;
@@ -828,12 +794,12 @@ void exibirResultados(const vector<float>& resultados) {
     cout << "===================" << endl;
 }
 
-void exibirMenu() {
+void exibirMenu() { //lembrete de como fazer a chamada caso facam errado
     cout << "Analisador Lexico RPN com Automatos Finitos Deterministicos" << endl;
     cout << "Uso: ./programa <arquivo.txt>" << endl;
 }
 
-bool testaParentesesAntes(const string& linha){
+bool testaParentesesAntes(const string& linha){ //tratando parenteses antes de fazer a operacao em si
     stack<char> parenStack;
     for (size_t i = 0; i < linha.size(); i++) {
         if (linha[i] == '(') {
@@ -928,4 +894,5 @@ int main(int argc, char* argv[]) {
     }
     
     return 0;
+
 }
