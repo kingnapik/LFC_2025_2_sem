@@ -12,7 +12,7 @@ grupo 3 RA1
 #include <sstream> //string stream
 #include <cmath> //matematica
 #include <map> //vai mapear as multiplas MEMs
-//#include <algorithm>
+#include <algorithm>
 #include <iomanip> //formatando saida
 
 using namespace std;
@@ -896,3 +896,4 @@ int main(int argc, char* argv[]) {
     return 0;
 
 }
+
